@@ -28,9 +28,8 @@ public partial class CCSPlayerPawn
 
     public new CCSPlayerController? Controller => (CCSPlayerController?) base.Controller;
 
-    public InputButtons InputButtons => MovementServices is {} csMovement
-        ? (InputButtons) csMovement.ButtonDownMaskPrev
-        : default;
+    // DemoCoach fork: Valve removed m_nButtonDownMaskPrev from the CS2 schema (protocol 14191); no replacement known yet.
+    public InputButtons InputButtons => default;
 
     public CCSWeaponBase? ActiveWeapon => WeaponServices?.ActiveWeaponHandle.Get<CCSWeaponBase>(Demo);
 
