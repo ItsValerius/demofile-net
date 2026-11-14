@@ -23,6 +23,8 @@ public static class FieldDecode
         // One example is TakeDamageFlags_t, which is supposedly
         // NET_DATA_TYPE_INT64. I haven't seen it set in CS2 demos
         // (even though it exists on CBaseEntity)
+        if (IsFixed8(fieldEncodingInfo))
+            return (ref BitBuffer buffer) => (T)Enum.ToObject(typeof(T), buffer.ReadUBits(8));
         return (ref BitBuffer buffer) => (T)Enum.ToObject(typeof(T), buffer.ReadUVarInt64());
     }
 
@@ -101,6 +103,10 @@ public static class FieldDecode
         if (fieldEncodingInfo.VarEncoder == "fixed64")
         {
             return (ref BitBuffer buffer) => DecodeFixed64(ref buffer);
+        }
+        if (IsFixed8(fieldEncodingInfo))
+        {
+            return (ref BitBuffer buffer) => buffer.ReadUBits(8);
         }
         else if (fieldEncodingInfo.VarEncoder != null)
         {
@@ -251,11 +257,19 @@ public static class FieldDecode
     public static FieldDecoder<bool> CreateDecoder_bool(FieldEncodingInfo fieldEncodingInfo) =>
         (ref BitBuffer buffer) => buffer.ReadOneBit();
 
+    // CS2 14197 sends 8-bit fields (uint8, int8, 8-bit enums, also in arrays and vectors) with the "fixed8" encoder: one
+    // raw byte instead of a varint. Vector lengths stay varints. Ported from LaihoE/demoparser 4ba136a.
+    public static bool IsFixed8(FieldEncodingInfo fieldEncodingInfo) => fieldEncodingInfo.VarEncoder == "fixed8";
+
     public static FieldDecoder<byte> CreateDecoder_byte(FieldEncodingInfo fieldEncodingInfo) =>
-        (ref BitBuffer buffer) => (byte)buffer.ReadUVarInt32();
+        IsFixed8(fieldEncodingInfo)
+            ? (ref BitBuffer buffer) => buffer.ReadByte()
+            : (ref BitBuffer buffer) => (byte)buffer.ReadUVarInt32();
 
     public static FieldDecoder<sbyte> CreateDecoder_sbyte(FieldEncodingInfo fieldEncodingInfo) =>
-        (ref BitBuffer buffer) => (sbyte)buffer.ReadVarInt32();
+        IsFixed8(fieldEncodingInfo)
+            ? (ref BitBuffer buffer) => (sbyte)buffer.ReadByte()
+            : (ref BitBuffer buffer) => (sbyte)buffer.ReadVarInt32();
 
     public static FieldDecoder<int> CreateDecoder_Int32(FieldEncodingInfo fieldEncodingInfo) =>
         (ref BitBuffer buffer) => buffer.ReadVarInt32();
